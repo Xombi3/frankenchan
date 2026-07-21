@@ -1,0 +1,13 @@
+{
+  "name": "FrankenChan Sensor Node (ESP32)",
+  "version": "1.0.0",
+  "new_install_prompt_erase": true,
+  "builds": [
+    {
+      "chipFamily": "ESP32",
+      "parts": [
+        { "path": "node-esp32.bin", "offset": 0 }
+      ]
+    }
+  ]
+}

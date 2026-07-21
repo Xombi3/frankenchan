@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FrankenChan — Flasher</title>
+<script type="module" src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"></script>
+<style>
+  :root{--fg:#e8e8f0;--bg:#0f0f1a;--card:#1a1a2b;--line:#2c2c44;--accent:#7fd4ff;--pink:#ffb3e0;--dim:#8a8aa0}
+  *{box-sizing:border-box}
+  body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--fg);
+       max-width:680px;margin:auto;padding:24px;line-height:1.55}
+  h1{color:var(--accent);font-size:2.1em;margin:0}
+  .sub{color:var(--pink);margin:4px 0 22px}
+  .picker{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
+  .dev{background:var(--card);border:2px solid var(--line);border-radius:14px;padding:14px;
+       cursor:pointer;text-align:left;color:var(--fg);font:inherit;transition:border-color .15s}
+  .dev:hover{border-color:#3d3d5c}
+  .dev.sel{border-color:var(--accent)}
+  .dev b{display:block;font-size:1.02em;margin-bottom:3px}
+  .dev span{color:var(--dim);font-size:.82em}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;margin:16px 0}
+  .card h2{font-size:1.05em;color:var(--accent);margin:0 0 10px}
+  ol{padding-left:20px;margin:8px 0}li{margin:6px 0}
+  code{background:#26263c;padding:2px 6px;border-radius:6px;font-size:.88em}
+  .warn{color:#ffcf7f;font-size:.88em}
+  .dim{color:var(--dim);font-size:.85em}
+  a{color:var(--accent)}
+  esp-web-install-button{--esp-tools-button-color:var(--accent);--esp-tools-button-text-color:#10202c}
+  .go{background:var(--accent);color:#10202c;border:0;border-radius:12px;padding:14px 28px;
+      font-size:1.1em;font-weight:bold;cursor:pointer}
+  footer{color:#555;font-size:.8em;margin-top:30px;text-align:center}
+  .hide{display:none}
+</style>
+</head>
+<body>
+
+<h1>&#9889; FrankenChan</h1>
+<p class="sub">Flash your StackChan and its sensor nodes — right from this page.</p>
+
+<div class="card">
+  <h2>1. What are you flashing?</h2>
+  <div class="picker" id="picker">
+    <button class="dev sel" data-t="main">
+      <b>&#129302; StackChan</b><span>The robot itself (CoreS3)</span></button>
+    <button class="dev" data-t="node-esp32">
+      <b>&#128225; Sensor node</b><span>ESP32 &mdash; Atom, Atom Lite, devkits</span></button>
+    <button class="dev" data-t="node-s3">
+      <b>&#128225; Sensor node</b><span>ESP32-S3 &mdash; AtomS3, S3 devkits</span></button>
+    <button class="dev" data-t="node-c3">
+      <b>&#128225; Sensor node</b><span>ESP32-C3 &mdash; Stamp C3, C3 devkits</span></button>
+  </div>
+  <p class="dim" id="what">Flashing the main robot firmware: face, voice chat, network monitor, IR remote, NFC, MQTT.</p>
+</div>
+
+<div class="card">
+  <h2>2. Plug it in and click</h2>
+  <ol>
+    <li>Connect the device over USB-C</li>
+    <li>Use <b>Chrome or Edge</b> on a desktop (Web Serial isn't in Safari or Firefox)</li>
+    <li>Click below and pick the serial port that appears</li>
+  </ol>
+
+  <esp-web-install-button id="btn" manifest="./manifest.json">
+    <button slot="activate" class="go">Install</button>
+    <span slot="unsupported" class="warn">This browser can't flash — use Chrome or Edge on desktop.</span>
+    <span slot="not-allowed" class="warn">Serial access isn't allowed on this page.</span>
+  </esp-web-install-button>
+
+  <p class="warn" style="margin-bottom:0">Port not showing up? Hold the reset/boot button while plugging in to force download mode.</p>
+</div>
+
+<div class="card" id="after-main">
+  <h2>3. First boot</h2>
+  <ol>
+    <li>It opens a Wi-Fi network <code>FrankenChan-xxxx</code> (password <code>stackchan</code>)</li>
+    <li>Join it — the setup page pops up (or browse to <code>192.168.4.1</code>)</li>
+    <li>Enter Wi-Fi, city and timezone. Optionally add an AI key for voice chat, and an MQTT broker for Home Assistant</li>
+    <li>Save. Later it lives at <a href="http://frankenchan.local">frankenchan.local</a>, with a dashboard at <a href="http://frankenchan.local/dash">/dash</a></li>
+  </ol>
+  <p class="dim">Controls: tap its back to talk &middot; swipe to change screens &middot; poke a cheek &middot; pick it up, shake it, or knock on the desk.</p>
+</div>
+
+<div class="card hide" id="after-node">
+  <h2>3. First boot</h2>
+  <ol>
+    <li>It opens a Wi-Fi network <code>FC-Node-xxxx</code> (password <code>stackchan</code>)</li>
+    <li>Join it — the setup page appears</li>
+    <li>Name the node, pick what it senses, and set its <b>direction</b> — StackChan turns its head that way when the sensor fires</li>
+    <li>Save. It shows up on StackChan's dashboard automatically</li>
+  </ol>
+  <p class="dim">No MAC address to copy and no channel to configure — nodes broadcast and sweep. The portal reopens for 30s on every boot if you want to change something.</p>
+</div>
+
+<footer>
+  Open firmware &middot; the original M5Stack firmware can be restored any time with
+  <a href="https://docs.m5stack.com/en/download">M5Burner</a>.
+</footer>
+
+<script>
+  const info = {
+    "main":       ["./manifest.json",             "Flashing the main robot firmware: face, voice chat, network monitor, IR remote, NFC, MQTT."],
+    "node-esp32": ["./manifest-node-esp32.json",  "Flashing a sensor node for classic ESP32 boards (M5 Atom, Atom Lite, most devkits)."],
+    "node-s3":    ["./manifest-node-s3.json",     "Flashing a sensor node for ESP32-S3 boards (M5 AtomS3, S3 devkits)."],
+    "node-c3":    ["./manifest-node-c3.json",     "Flashing a sensor node for ESP32-C3 boards (M5 Stamp C3, C3 devkits)."]
+  };
+  const btn = document.getElementById('btn');
+  const what = document.getElementById('what');
+  const afterMain = document.getElementById('after-main');
+  const afterNode = document.getElementById('after-node');
+
+  document.getElementById('picker').addEventListener('click', (e) => {
+    const el = e.target.closest('.dev');
+    if (!el) return;
+    document.querySelectorAll('.dev').forEach(d => d.classList.remove('sel'));
+    el.classList.add('sel');
+    const t = el.dataset.t;
+    btn.setAttribute('manifest', info[t][0]);
+    what.textContent = info[t][1];
+    const isMain = t === 'main';
+    afterMain.classList.toggle('hide', !isMain);
+    afterNode.classList.toggle('hide', isMain);
+  });
+</script>
+</body>
+</html>
