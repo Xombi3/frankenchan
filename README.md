@@ -1,4 +1,4 @@
-# ⚡ FrankenChan
+# ⚡ FrankenChan 
 
 **Custom firmware for the official M5Stack StackChan (SKU K151, CoreS3) — a complete package.**
 A living desk robot with real moods, head motion, AI voice chat, useful glances, and an IoT REST API. Flash it from your browser in two minutes.
