@@ -1,0 +1,103 @@
+name: Build firmwares & deploy flasher
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio
+            ~/.cache/pip
+          key: pio-${{ hashFiles('platformio.ini', 'extras/sensor_node/platformio.ini') }}
+
+      - name: Install PlatformIO + esptool
+        run: pip install platformio esptool==4.8.1
+
+      # ---------------- main robot firmware (ESP32-S3, 16MB) ----------------
+      - name: Build StackChan firmware
+        run: pio run -e stackchan
+
+      - name: Merge StackChan binary
+        run: |
+          B=.pio/build/stackchan
+          BOOT_APP0=$(find ~/.platformio -name boot_app0.bin | head -1)
+          python -m esptool --chip esp32s3 merge_bin -o flasher/frankenchan.bin \
+            --flash_size 16MB \
+            0x0000  $B/bootloader.bin \
+            0x8000  $B/partitions.bin \
+            0xe000  "$BOOT_APP0" \
+            0x10000 $B/firmware.bin
+
+      # ---------------- sensor nodes (one source, three chips) ---------------
+      - name: Build sensor nodes
+        working-directory: extras/sensor_node
+        run: pio run
+
+      - name: Merge sensor node binaries
+        run: |
+          BOOT_APP0=$(find ~/.platformio -name boot_app0.bin | head -1)
+          merge() {   # $1 = pio env, $2 = esptool chip name, $3 = bootloader offset
+            B="extras/sensor_node/.pio/build/$1"
+            python -m esptool --chip "$2" merge_bin -o "flasher/$1.bin" \
+              --flash_size 4MB \
+              "$3"    "$B/bootloader.bin" \
+              0x8000  "$B/partitions.bin" \
+              0xe000  "$BOOT_APP0" \
+              0x10000 "$B/firmware.bin"
+          }
+          # classic ESP32 puts its bootloader at 0x1000; S3 and C3 use 0x0000
+          merge node-esp32 esp32   0x1000
+          merge node-s3    esp32s3 0x0000
+          merge node-c3    esp32c3 0x0000
+          ls -la flasher/
+
+      - name: Sanity-check manifests point at real files
+        run: |
+          for m in flasher/manifest*.json; do
+            f=$(python -c "import json,sys;print(json.load(open('$m'))['builds'][0]['parts'][0]['path'])")
+            test -f "flasher/$f" || { echo "MISSING: $m expects flasher/$f"; exit 1; }
+            echo "ok: $m -> $f"
+          done
+
+      - name: Upload firmware artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frankenchan-binaries
+          path: flasher/*.bin
+
+      - name: Upload Pages artifact (web flasher)
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: flasher/
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
